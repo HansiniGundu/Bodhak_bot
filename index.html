@@ -401,176 +401,175 @@
             </button>
         </div>
     </div>
-
-    <script>
-        const chatBody = document.getElementById('chat-body');
-        const messageInput = document.getElementById('message-input');
-        const sendBtn = document.getElementById('send-btn');
-        const resetBtn = document.getElementById('reset-btn');
-        
-        // Generate a unique session ID for this browser session
-        const sessionId = Date.now().toString();
-        
-        // Remove welcome message on first interaction
-        function removeWelcomeMessage() {
-            const welcomeMessage = document.querySelector('.welcome-message');
-            if (welcomeMessage) {
-                welcomeMessage.remove();
-            }
+       <script>
+    const chatBody = document.getElementById('chat-body');
+    const messageInput = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    
+    // Generate a unique session ID for this browser session
+    const sessionId = Date.now().toString();
+    
+    // Remove welcome message on first interaction
+    function removeWelcomeMessage() {
+        const welcomeMessage = document.querySelector('.welcome-message');
+        if (welcomeMessage) {
+            welcomeMessage.remove();
         }
+    }
+    
+    function getCurrentTime() {
+        const now = new Date();
+        return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    function addMessage(content, isUser) {
+        removeWelcomeMessage();
         
-        function getCurrentTime() {
-            const now = new Date();
-            return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        }
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
         
-        function addMessage(content, isUser) {
-            removeWelcomeMessage();
+        // Format code blocks if present
+        if (!isUser && content.includes('```')) {
+            let formattedContent = '';
+            let isCodeBlock = false;
+            const lines = content.split('\n');
             
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
-            
-            // Format code blocks if present
-            if (!isUser && content.includes('```')) {
-                let formattedContent = '';
-                let isCodeBlock = false;
-                const lines = content.split('\n');
-                
-                for (let line of lines) {
-                    if (line.startsWith('```')) {
-                        if (isCodeBlock) {
-                            formattedContent += '</code></pre>';
-                            isCodeBlock = false;
-                        } else {
-                            const language = line.substring(3).trim();
-                            formattedContent += `<pre><code class="${language}">`;
-                            isCodeBlock = true;
-                        }
+            for (let line of lines) {
+                if (line.startsWith('```')) {
+                    if (isCodeBlock) {
+                        formattedContent += '</code></pre>';
+                        isCodeBlock = false;
                     } else {
-                        formattedContent += isCodeBlock ? 
-                            line.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '\n' : 
-                            line + '<br>';
+                        const language = line.substring(3).trim();
+                        formattedContent += `<pre><code class="${language}">`;
+                        isCodeBlock = true;
                     }
+                } else {
+                    formattedContent += isCodeBlock ? 
+                        line.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '\n' : 
+                        line + '<br>';
                 }
-                
-                messageDiv.innerHTML = formattedContent;
-            } else {
-                messageDiv.innerText = content;
             }
             
-            // Add avatar
-            const avatarDiv = document.createElement('div');
-            avatarDiv.className = `avatar ${isUser ? 'user-avatar' : 'ai-avatar'}`;
-            avatarDiv.innerHTML = isUser ? 
-                '<i class="fas fa-user"></i>' : 
-                '<i class="fas fa-robot"></i>';
-            messageDiv.appendChild(avatarDiv);
+            messageDiv.innerHTML = formattedContent;
+        } else {
+            messageDiv.innerText = content;
+        }
+        
+        // Add avatar
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = `avatar ${isUser ? 'user-avatar' : 'ai-avatar'}`;
+        avatarDiv.innerHTML = isUser ? 
+            '<i class="fas fa-user"></i>' : 
+            '<i class="fas fa-robot"></i>';
+        messageDiv.appendChild(avatarDiv);
+        
+        // Add timestamp
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'message-time';
+        timeDiv.innerText = getCurrentTime();
+        messageDiv.appendChild(timeDiv);
+        
+        chatBody.appendChild(messageDiv);
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+    
+    function addThinkingIndicator() {
+        const thinkingDiv = document.createElement('div');
+        thinkingDiv.className = 'thinking';
+        thinkingDiv.innerHTML = 'Thinking <span></span><span></span><span></span>';
+        chatBody.appendChild(thinkingDiv);
+        chatBody.scrollTop = chatBody.scrollHeight;
+        return thinkingDiv;
+    }
+    
+    function sendMessage() {
+        const message = messageInput.value.trim();
+        if (message) {
+            addMessage(message, true);
+            messageInput.value = '';
             
-            // Add timestamp
-            const timeDiv = document.createElement('div');
-            timeDiv.className = 'message-time';
-            timeDiv.innerText = getCurrentTime();
-            messageDiv.appendChild(timeDiv);
+            // Add thinking indicator
+            const thinkingDiv = addThinkingIndicator();
             
-            chatBody.appendChild(messageDiv);
-            chatBody.scrollTop = chatBody.scrollHeight;
-        }
-        
-        function addThinkingIndicator() {
-            const thinkingDiv = document.createElement('div');
-            thinkingDiv.className = 'thinking';
-            thinkingDiv.innerHTML = 'Thinking <span></span><span></span><span></span>';
-            chatBody.appendChild(thinkingDiv);
-            chatBody.scrollTop = chatBody.scrollHeight;
-            return thinkingDiv;
-        }
-        
-        function sendMessage() {
-            const message = messageInput.value.trim();
-            if (message) {
-                addMessage(message, true);
-                messageInput.value = '';
-                
-                // Add thinking indicator
-                const thinkingDiv = addThinkingIndicator();
-                
-                // Send message to backend
-                fetch('/chat', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        message: message,
-                        session_id: sessionId
-                    }),
-                })
-                .then(response => response.json())
-                .then(data => {
-                    // Remove thinking indicator
-                    chatBody.removeChild(thinkingDiv);
-                    
-                    if (data.error) {
-                        addMessage('Error: ' + data.error, false);
-                    } else {
-                        addMessage(data.reply, false);
-                    }
-                })
-                .catch(error => {
-                    // Remove thinking indicator
-                    chatBody.removeChild(thinkingDiv);
-                    addMessage('Error connecting to server. Please try again.', false);
-                    console.error('Error:', error);
-                });
-            }
-        }
-        
-        function resetConversation() {
-            fetch('/reset', {
+            // Send message to backend
+            fetch('https://bodhak-backend-2.onrender.com/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
+                    message: message,
                     session_id: sessionId
                 }),
             })
             .then(response => response.json())
             .then(data => {
-                // Clear chat interface
-                chatBody.innerHTML = '';
+                // Remove thinking indicator
+                chatBody.removeChild(thinkingDiv);
                 
-                // Add welcome message back
-                const welcomeDiv = document.createElement('div');
-                welcomeDiv.className = 'welcome-message';
-                welcomeDiv.innerHTML = `
-                    <h2>Welcome to AI Tutor</h2>
-                    <p>I'm your educational assistant powered by Groq's LLaMA3. Ask me anything about math, science, history, literature, or any subject you're studying!</p>
-                `;
-                chatBody.appendChild(welcomeDiv);
-                
-                // Add initial AI message
-                addMessage('Hello! I\'m your AI tutor. How can I help you with your learning today?', false);
+                if (data.error) {
+                    addMessage('Error: ' + data.error, false);
+                } else {
+                    addMessage(data.reply, false);
+                }
             })
             .catch(error => {
+                // Remove thinking indicator
+                chatBody.removeChild(thinkingDiv);
+                addMessage('Error connecting to server. Please try again.', false);
                 console.error('Error:', error);
-                addMessage('Error resetting conversation. Please try again.', false);
             });
         }
-        
-        sendBtn.addEventListener('click', sendMessage);
-        resetBtn.addEventListener('click', resetConversation);
-        
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
+    }
+    
+    function resetConversation() {
+        fetch('https://bodhak-backend-2.onrender.com/reset', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                session_id: sessionId
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Clear chat interface
+            chatBody.innerHTML = '';
+            
+            // Add welcome message back
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.className = 'welcome-message';
+            welcomeDiv.innerHTML = `
+                <h2>Welcome to AI Tutor</h2>
+                <p>I'm your educational assistant powered by Groq's LLaMA3. Ask me anything about math, science, history, literature, or any subject you're studying!</p>
+            `;
+            chatBody.appendChild(welcomeDiv);
+            
+            // Add initial AI message
+            addMessage('Hello! I\'m your AI tutor. How can I help you with your learning today?', false);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            addMessage('Error resetting conversation. Please try again.', false);
         });
+    }
+    
+    sendBtn.addEventListener('click', sendMessage);
+    resetBtn.addEventListener('click', resetConversation);
+    
+    messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
 
-        // Focus input on page load
-        window.addEventListener('load', () => {
-            messageInput.focus();
-        });
-    </script>
+    // Focus input on page load
+    window.addEventListener('load', () => {
+        messageInput.focus();
+    });
+</script> 
 </body>
 </html>
